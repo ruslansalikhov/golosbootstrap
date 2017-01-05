@@ -1,13 +1,15 @@
 #!/bin/bash
 
+GOLOS_REPO="https://github.com/GolosChain/golos"
+
 set -e
 set -x
 
-# Only works under root
-if [[ $EUID -ne 0 ]]; then
-	echo "ERROR: This script must be run as root"
-	exit 1
+MODE=build_and_install
+if [ ! -z $1 ]; then
+	[ x"build_only" == x"$1" ] && MODE=build_only
 fi
+
 
 # Only works on Ubuntu
 OS=`cat /etc/lsb-release 2>/dev/null| grep DISTRIB_ID | cut -d'=' -f2 | tr '[:upper:]' '[:lower:]'`
@@ -22,7 +24,7 @@ BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release -DLOW_MEMORY_NODE=ON -DCLEAR_VOTES=ON"
 # Test Physical Memory
 PHYMEM=$(free -g|awk '/^Mem:/{print $2}')
 if (( PHYMEM < 14 )); then
-	echo "WARN: You have Physical Memory < 16Gb, will build LOW_MEMOTY_NODE"
+	echo "WARN: You have Physical Memory < 16Gb, will build LOW_MEMORY_NODE"
 	BUILD_OPTIONS="$BUILD_OPTIONS -DLOW_MEMORY_NODE=ON -DCLEAR_VOTES=ON"
 elif (( PHYMEM < 2 )); then
 	echo "ERROR: You have no enough Physical Memory (min: 2Gb)"
@@ -33,6 +35,7 @@ fi
 CPUNUM=$(getconf _NPROCESSORS_ONLN)
 
 BASEDIR=`mktemp -d`
+trap 'rm -rf $BASEDIR' EXIT
 pushd $BASEDIR
 
 # Unpack contribute files
@@ -44,17 +47,27 @@ CONTRIBEOF
 # Preparing System
 ##################################
 
-# Update packages list
-apt-get update || :
 
-# Upgrade system
-apt-get -y upgrade
+# Check if required packages are not installed
+PACKAGES_TO_INSTALL=""
+for pkg in git cmake g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev libboost-all-dev libssl-dev libncurses5-dev doxygen libreadline-dev dh-autoreconf build-essential; do
+	PKG_OK=no
+	dpkg-query -W --showformat='${Status}\n' $pkg | grep "install ok installed" > /dev/null && PKG_OK=yes
+	echo Checking for $pkg: $PKG_OK
+	if [ x"no" == x"$PKG_OK" ]; then
+		  PACKAGES_TO_INSTALL="$PACKAGES_TO_INSTALL $pkg"
+	fi
+done
 
-# Install Build Requirements
-apt-get -y install git cmake g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev libboost-all-dev libssl-dev libncurses5-dev doxygen libreadline-dev dh-autoreconf 
+# If found missed packages - install
+if [ x"" != x"$PACKAGES_TO_INSTALL" ]; then
+	sudo apt-get update || :
+	sudo apt-get install -y $PACKAGES_TO_INSTALL
+fi
 
-# Install Packaging Requirements
-apt-get -y install build-essential
+
+# Upgrade system (not sure)
+# apt-get -y upgrade
 
 ##################################
 # Building Golosnode
@@ -67,7 +80,7 @@ mkdir -p $DEB_PATH
 mkdir -p $GOLOS_PATH
 
 # Clone Golos
-git clone https://github.com/GolosChain/golos
+git clone $GOLOS_REPO
 cd golos
 git checkout master
 git submodule update --init --recursive
@@ -85,8 +98,8 @@ cd ..
 # Copying contrib files to package
 mkdir $GOLOS_PATH/witness_node_data_dir
 cp $BASEDIR/contrib/config.ini $GOLOS_PATH/witness_node_data_dir/config.ini
-mkdir $DEB_PATH/lib/systemd/system
-cp $BASEDIR/contrib/golosnode.service $DEB_PATH/lib/systemd/system/
+mkdir -p $DEB_PATH/lib/systemd/system
+cp $BASEDIR/contrib/golosd.service $DEB_PATH/lib/systemd/system/
 cp -r $BASEDIR/contrib/debian $DEB_PATH/DEBIAN
 
 # Fixing package version
@@ -98,13 +111,17 @@ sed -i "s/##UNIXTIME##/$UNIXTIME/" $DEB_PATH/DEBIAN/control
 # Make deb package
 fakeroot dpkg-deb --build $DEB_PATH
 
+mv -v $DEB_PATH/../golos.deb /tmp/golos-$GOLOS_VERSION-$UNIXTIME.deb
+
+echo 
+echo "#############################################################"
+echo "DEB package path: /tmp/golos-${GOLOS_VERSION}-${UNIXTIME}.deb"
+echo "#############################################################"
+echo 
+
+if [ x"$MODE" == x"build_and_install" ]; then
+	sudo dpkg -i /tmp/golos-$GOLOS_VERSION-$UNIXTIME.deb
+fi
+
 popd # basedir
-
-
-##################################
-# Clean Up
-##################################
-rm -rf $BASEDIR/golos
-rm -rf $BASEDIR/golosnode
-rmdir $BASEDIR
 
