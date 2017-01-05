@@ -1,0 +1,12 @@
+Source:		golos
+Section:	misc
+Priority:	optional
+Maintainer:	Ruslan Salikhov <ruslan.salihov@gmail.com>
+Build-Depends:	git, cmake, g++, python-dev, autotools-dev, libicu-dev, build-essential, libbz2-dev, libboost-all-dev, libssl-dev, libncurses5-dev, libreadline-dev, dh-autoreconf
+Homepage:	https://github.com/GolosChain/golos
+Package:	golos
+Version:	##GOLOS_VERSION##-##UNIXTIME##
+Architecture:	amd64
+Depends:	libssl1.0.0, libreadline6
+Description:	A client for the Golos network
+ A client for the Golos network

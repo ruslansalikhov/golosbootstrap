@@ -1,0 +1,18 @@
+[Unit]
+Description=Golos Node Service
+
+[Service]
+Restart=always
+WorkingDirectory=/opt/golos
+ExecStart=/opt/golos/golosd
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=golosd
+StartLimitInterval=1
+Type=simple
+User=golos
+TimeoutSec=7200
+TimeoutStopSec=7200
+
+[Install]
+WantedBy=multi-user.target
