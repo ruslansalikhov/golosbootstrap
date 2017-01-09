@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 PROGNAME=$(basename $0)
 
 # Settings
@@ -9,9 +11,9 @@ LOG_FILE=/tmp/golosbootstrap.log
 
 # Build Options
 BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release"
+BUILD_THREADS=1
 
 { # this ensures the entire script is downloaded #
-
 
 # Setup logging output of each command to log file
 BASEDIR=""
@@ -52,29 +54,30 @@ if [ ! -z $1 ]; then
 	[ x"build_only" == x"$1" ] && MODE=build_only
 fi
 
-# ###################
-# Checking system
-# ###################
-
-print_info "* CHECKING SYSTEM"
+print_info "* Checking System"
 
 # Only works on Ubuntu
-OS=`cat /etc/lsb-release 2>/dev/null| grep DISTRIB_ID | cut -d'=' -f2 | tr '[:upper:]' '[:lower:]'`
-if [[ "x$OS" != "xubuntu" ]]; then
-	error_exit "ERROR: Unsupported OS"
+os=`cat /etc/lsb-release 2>/dev/null| grep DISTRIB_ID | cut -d'=' -f2 | tr '[:upper:]' '[:lower:]'`
+if [[ "x$os" != "xubuntu" ]]; then
+	error_exit "Unsupported OS"
 fi
 
 # Test Physical Memory
-PHYMEM=$(free -g|awk '/^Mem:/{print $2}')
-if (( PHYMEM < 2 )); then
-	error_exit "You have no enough Physical Memory (min: 2Gb)"
-elif (( PHYMEM < 14 )); then
+phymem=$(free|awk '/^Mem:/{print $2}')
+phymem=$((phymem/1000000))
+if (( phymem < 4 )); then
+	error_exit "You have no enough Physical Memory (min: 4Gb)"
+elif (( phymem < 16 )); then
 	print_warn "You have Physical Memory < 16Gb, will build LOW_MEMORY_NODE"
 	BUILD_OPTIONS="$BUILD_OPTIONS -DLOW_MEMORY_NODE=ON -DCLEAR_VOTES=ON"
 fi
 
 # Get number of processors
-CPUNUM=$(getconf _NPROCESSORS_ONLN)
+cpunum=$(getconf _NPROCESSORS_ONLN)
+
+# There are required 3gb per compiling thread
+possible_threads=$((phymem/3))
+BUILD_THREADS=$((possible_threads<cpunum?possible_threads:cpunum))
 
 BASEDIR=`mktemp -d`
 if [ $? -ne 0 ]; then
@@ -87,27 +90,27 @@ base64 -d <<CONTRIBEOF | tar xz
 ##CONTRIBBASE64##
 CONTRIBEOF
 
-##################################
-# Preparing System
-##################################
-
 
 # Check if required packages are not installed
-print_info "** CHECKING REQUIRED PACKAGES FROM BUILDING"
-PACKAGES_TO_INSTALL=""
+print_info " - Checking Required Packages"
+pkgs_to_install=""
 for pkg in git cmake g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev libboost-all-dev libssl-dev libncurses5-dev doxygen libreadline-dev dh-autoreconf build-essential; do
-	PKG_OK=no
-	dpkg-query -W --showformat='${Status}\n' $pkg | grep "install ok installed" > /dev/null && PKG_OK=yes
-	print_info " - Checking for $pkg: $PKG_OK"
-	if [ x"no" == x"$PKG_OK" ]; then
-		  PACKAGES_TO_INSTALL="$PACKAGES_TO_INSTALL $pkg"
+	pkg_ok=no
+	dpkg-query -W --showformat='${Status}\n' $pkg | grep "install ok installed" > /dev/null && pkg_ok=yes
+	print_info " - - Checking For $pkg: $pkg_ok"
+	if [ x"no" == x"$pkg_ok" ]; then
+		  pkgs_to_install="$pkgs_to_install $pkg"
 	fi
 done
 
 # If found missed packages - install
-if [ x"" != x"$PACKAGES_TO_INSTALL" ]; then
+if [ x"" != x"$pkgs_to_install" ]; then
+	print_info ""
+	print_info " - - Next packages will be installed: $pkgs_to_install."
+	print_info " - - This operation requires root privileges."
+	print_info ""
 	sudo apt-get update || : 
-	sudo apt-get install -y $PACKAGES_TO_INSTALL || error_exit "Cannot Install Required Packages"
+	sudo apt-get install -y $pkgs_to_install || error_exit "Cannot Install Required Packages"
 fi
 
 
@@ -118,7 +121,7 @@ fi
 # Building Golosnode
 ##################################
 
-print_info "* BULDING GOLOS"
+print_info "* Building Golos"
 
 # Create folder for installing node
 DEB_PATH=$BASEDIR/package/golos
@@ -127,19 +130,19 @@ mkdir -p $DEB_PATH
 mkdir -p $GOLOS_PATH
 
 # Clone Golos
-print_info "** DOWNLOADING SOURCE CODE"
+print_info " - Downloading Source Code"
 git clone $GOLOS_REPO || error_exit "Cannot clone sources"
 cd golos
 git checkout master
 git submodule update --init --recursive
 
 # Build
-print_info "** COMPILING"
+print_info " - Compiling"
 cmake $BUILD_OPTIONS . || error_exit "Cannot configure project"
-make -j$CPUNUM || error_exit "Cannot compile project"
+make -j$BUILD_THREADS || error_exit "Cannot compile project"
 
 # Preparing golosnode package
-print_info "** PREPARING FILES FOR PACKAGING"
+print_info " - Copying Files For Packaging"
 install -m 0755 programs/golosd/golosd $GOLOS_PATH/
 install -m 0644 programs/golosd/snapshot5392323.json $GOLOS_PATH
 install -m 0755 programs/cli_wallet/cli_wallet $GOLOS_PATH
@@ -159,25 +162,27 @@ sed -i "s/##GOLOS_VERSION##/$GOLOS_VERSION/" $DEB_PATH/DEBIAN/control
 sed -i "s/##UNIXTIME##/$UNIXTIME/" $DEB_PATH/DEBIAN/control
 
 # Make deb package
-print_info "** PACKAGING"
+print_info "* Packaging"
 fakeroot dpkg-deb --build $DEB_PATH || error_exit "Cannot make DEB"
 
 mv $DEB_PATH/../golos.deb /tmp/golos-$GOLOS_VERSION-$UNIXTIME.deb
 
 if [ x"$MODE" == x"build_and_install" ]; then
-	print_info "* INSTALLING"
+	print_info "* Installing Golos (requires root privileges)"
 	sudo dpkg -i /tmp/golos-$GOLOS_VERSION-$UNIXTIME.deb || error_exit "Cannot install package"
 fi
 
 print_info "* DONE"
 print_info
-print_info "- DEB package path: /tmp/golos-${GOLOS_VERSION}-${UNIXTIME}.deb"
 print_info
-print_info "-- To run golosd use: systemctl start golosd"
-print_info "-- To check golosd use: systemctl status golosd"
-print_info "-- To stop golosd use: systemctl stop golosd"
-print_info "-- Golos path: /opt/golos"
-print_info 
+print_info "###############################################################"
+print_info "# DEB package path: /tmp/golos-${GOLOS_VERSION}-${UNIXTIME}.deb"
+print_info "#"
+print_info "# To run golosd use: sudo systemctl start golosd"
+print_info "# To check golosd use: sudo systemctl status golosd"
+print_info "# To stop golosd use: sudo systemctl stop golosd"
+print_info "# Golos path: /opt/golos"
+print_info "###############################################################"
 
 popd > /dev/null # basedir
 
