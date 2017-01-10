@@ -139,8 +139,7 @@ git submodule update --init --recursive >&3 || error_exit "Cannot clone sources"
 # Build
 print_info " - Compiling"
 cmake $BUILD_OPTIONS . || error_exit "Cannot configure project"
-(make -j$BUILD_THREADS; rv=$?) | tee -a $LOG_FILE | grep -e "^\[.*%\]" >&3
-[[ -n $rv && $rv -eq 0 ]] || error_exit "Cannot compile project"
+make -j$BUILD_THREADS >&3 || error_exit "Cannot compile project"
 
 # Preparing golosnode package
 print_info " - Copying Files For Packaging"
