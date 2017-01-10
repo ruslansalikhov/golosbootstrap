@@ -109,8 +109,8 @@ if [ x"" != x"$pkgs_to_install" ]; then
 	print_info " - - Next packages will be installed: $pkgs_to_install."
 	print_info " - - This operation requires root privileges."
 	print_info ""
-	sudo apt-get update || : 
-	sudo apt-get install -y $pkgs_to_install || error_exit "Cannot Install Required Packages"
+	sudo apt-get update >&3 || : 
+	sudo apt-get install -y $pkgs_to_install >&3 || error_exit "Cannot Install Required Packages"
 fi
 
 
@@ -131,10 +131,10 @@ mkdir -p $GOLOS_PATH
 
 # Clone Golos
 print_info " - Downloading Source Code"
-git clone $GOLOS_REPO || error_exit "Cannot clone sources"
+git clone $GOLOS_REPO >&3 || error_exit "Cannot clone sources"
 cd golos
 git checkout master
-git submodule update --init --recursive || error_exit "Cannot clone sources"
+git submodule update --init --recursive >&3 || error_exit "Cannot clone sources"
 
 # Build
 print_info " - Compiling"
