@@ -2,6 +2,7 @@
 
 set -x
 
+LC_ALL=C
 PROGNAME=$(basename $0)
 
 # Settings
@@ -20,14 +21,13 @@ BASEDIR=""
 
 function cleanup
 {
-	exec 2>&4 1>&3
 	[ ! -z $BASEDIR ] && rm -rf $BASEDIR
 }
 
 
 function error_exit
 {
-	echo "${PROGNAME}: ERROR - ${1:-"Unknown Error"}" >&4
+	echo "${PROGNAME}: ERROR - ${1:-"Unknown Error"}"
 	exit 1
 }
 
@@ -35,7 +35,7 @@ function print_info
 {
 	bold=`tput bold`
 	reset=`tput sgr0`
-	echo "${bold}$1${reset}" >&3
+	echo "${bold}$1${reset}"
 }
 
 function print_warn
@@ -45,8 +45,6 @@ function print_warn
 	echo "${bold}WARN: $1${reset}" >&4
 }
 
-exec 3>&1 4>&2
-exec 1>$LOG_FILE 2>&1
 trap cleanup EXIT INT TERM QUIT
 
 # Parsing arguments
@@ -109,8 +107,8 @@ if [ x"" != x"$pkgs_to_install" ]; then
 	print_info " - - Next packages will be installed: $pkgs_to_install."
 	print_info " - - This operation requires root privileges."
 	print_info ""
-	sudo apt-get update >&3 || : 
-	sudo apt-get install -y $pkgs_to_install >&3 || error_exit "Cannot Install Required Packages"
+	sudo apt-get update || : 
+	sudo apt-get install -y $pkgs_to_install || error_exit "Cannot Install Required Packages"
 fi
 
 
@@ -131,15 +129,15 @@ mkdir -p $GOLOS_PATH
 
 # Clone Golos
 print_info " - Downloading Source Code"
-git clone $GOLOS_REPO >&3 || error_exit "Cannot clone sources"
+git clone $GOLOS_REPO || error_exit "Cannot clone sources"
 cd golos
 git checkout master
-git submodule update --init --recursive >&3 || error_exit "Cannot clone sources"
+git submodule update --init --recursive || error_exit "Cannot clone sources"
 
 # Build
 print_info " - Compiling"
 cmake $BUILD_OPTIONS . || error_exit "Cannot configure project"
-make -j$BUILD_THREADS >&3 || error_exit "Cannot compile project"
+make -j$BUILD_THREADS || error_exit "Cannot compile project"
 
 # Preparing golosnode package
 print_info " - Copying Files For Packaging"
