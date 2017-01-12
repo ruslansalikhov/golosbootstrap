@@ -42,7 +42,7 @@ function print_warn
 {
 	bold=`tput dim`
 	reset=`tput sgr0`
-	echo "${bold}WARN: $1${reset}" >&4
+	echo "${bold}WARN: $1${reset}"
 }
 
 trap cleanup EXIT INT TERM QUIT
