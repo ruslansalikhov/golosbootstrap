@@ -70,12 +70,16 @@ elif (( phymem < 16 )); then
 	BUILD_OPTIONS="$BUILD_OPTIONS -DLOW_MEMORY_NODE=ON -DCLEAR_VOTES=ON"
 fi
 
-# Get number of processors
 cpunum=$(getconf _NPROCESSORS_ONLN)
+if (( cpunum <= 0)); then
+	print_warn "Cannot get correct number of CPU. Will set to 1"
+	cpunum=1
+fi
 
 # There are required 3gb per compiling thread
 possible_threads=$((phymem/3))
 BUILD_THREADS=$((possible_threads<cpunum?possible_threads:cpunum))
+(( BUILD_THREADS < 1 )) && BUILD_THREADS=1
 
 BASEDIR=`mktemp -d`
 if [ $? -ne 0 ]; then
