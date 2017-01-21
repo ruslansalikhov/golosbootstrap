@@ -10,13 +10,13 @@ This script will clone last golos sources from github, build it and setup on you
 To build and install last version of golos node you can use the script using cURL:
 
 ```sh
-curl -o- -L https://github.com/ruslansalikhov/golosbootstrap/releases/download/0.1.5/golosbootstrap.sh | bash
+curl -o- -L https://github.com/ruslansalikhov/golosbootstrap/releases/download/0.1.6/golosbootstrap.sh | bash
 ```
 
 or Wget:
 
 ```sh
-wget -qO- https://github.com/ruslansalikhov/golosbootstrap/releases/download/0.1.5/golosbootstrap.sh | bash
+wget -qO- https://github.com/ruslansalikhov/golosbootstrap/releases/download/0.1.6/golosbootstrap.sh | bash
 ```
 
 or you can download script and run it manually.
@@ -24,6 +24,6 @@ or you can download script and run it manually.
 If you want only build package - add "build_only" argument:
 
 ```sh
-curl -o- -L https://github.com/ruslansalikhov/golosbootstrap/releases/download/0.1.5/golosbootstrap.sh | bash -s -- build_only
+curl -o- -L https://github.com/ruslansalikhov/golosbootstrap/releases/download/0.1.6/golosbootstrap.sh | bash -s -- build_only
 ```
 

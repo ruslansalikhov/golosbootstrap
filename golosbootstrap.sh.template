@@ -138,6 +138,10 @@ cd golos
 git checkout master
 git submodule update --init --recursive || error_exit "Cannot clone sources"
 
+# Extract golos version
+GOLOS_VERSION=$(find $BASEDIR/golos/libraries -name "config.hpp" -exec grep -m 1 -E "STEEMIT_BLOCKCHAIN_VERSION.*version" {} \;) || error_exit "Cannot extract golos version"
+GOLOS_VERSION=$(echo $GOLOS_VERSION | grep -oP '(\d+(, )?){3}' | sed 's/, /./g')
+
 # Build
 print_info " - Compiling"
 cmake $BUILD_OPTIONS . || error_exit "Cannot configure project"
@@ -158,7 +162,6 @@ cp $BASEDIR/contrib/golosd.service $DEB_PATH/lib/systemd/system/
 cp -r $BASEDIR/contrib/debian $DEB_PATH/DEBIAN
 
 # Fixing package version
-GOLOS_VERSION=$(cat $BASEDIR/golos/libraries/chain/include/steemit/chain/config.hpp | grep -m 1 STEEMIT_BLOCKCHAIN_VERSION | grep -oP '(\d+(, )?){3}' | sed 's/, /./g')
 UNIXTIME=$(date +%s)
 sed -i "s/##GOLOS_VERSION##/$GOLOS_VERSION/" $DEB_PATH/DEBIAN/control
 sed -i "s/##UNIXTIME##/$UNIXTIME/" $DEB_PATH/DEBIAN/control
