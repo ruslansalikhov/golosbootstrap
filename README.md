@@ -30,6 +30,6 @@ curl -o- -L https://github.com/ruslansalikhov/golosbootstrap/releases/download/0
 If you want build custom branch - export GOLOS_BRANCH variable:
 
 ```sh
-curl -o- -L https://github.com/ruslansalikhov/golosbootstrap/releases/download/0.1.7/golosbootstrap.sh | env GOLOS_BRANCH=tags/0.14.2 bash -s -- build_only
+curl -o- -L https://github.com/ruslansalikhov/golosbootstrap/releases/download/0.1.7/golosbootstrap.sh | env GOLOS_BRANCH=tags/v0.14.2 bash -s -- build_only
 ```
 
