@@ -7,6 +7,7 @@ PROGNAME=$(basename $0)
 
 # Settings
 GOLOS_REPO="https://github.com/GolosChain/golos"
+BRANCH=master
 MODE=build_and_install
 LOG_FILE=/tmp/golosbootstrap.log
 
@@ -131,11 +132,14 @@ GOLOS_PATH=$BASEDIR/package/golos/opt/golos
 mkdir -p $DEB_PATH
 mkdir -p $GOLOS_PATH
 
-# Clone Golos
-print_info " - Downloading Source Code"
+if [ ! -z $GOLOS_BRANCH ]; then
+	BRANCH=$GOLOS_BRANCH
+fi
+print_info " - Branch '$BRANCH' will be used"
+
 git clone $GOLOS_REPO || error_exit "Cannot clone sources"
 cd golos
-git checkout master
+git checkout $BRANCH || error_exit "Cannot find defined branch"
 git submodule update --init --recursive || error_exit "Cannot clone sources"
 
 # Extract golos version
@@ -144,8 +148,9 @@ GOLOS_VERSION=$(echo $GOLOS_VERSION | grep -oP '(\d+(, )?){3}' | sed 's/, /./g')
 
 # Build
 print_info " - Compiling"
-cmake $BUILD_OPTIONS . || error_exit "Cannot configure project"
+cmake $BUILD_OPTIONS $GOLOS_BUILD_OPTIONS . || error_exit "Cannot configure project"
 make -j$BUILD_THREADS || error_exit "Cannot compile project"
+
 
 # Preparing golosnode package
 print_info " - Copying Files For Packaging"
