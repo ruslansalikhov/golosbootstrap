@@ -12,7 +12,7 @@ MODE=build_and_install
 LOG_FILE=/tmp/golosbootstrap.log
 
 # Build Options
-BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release"
+BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBRARIES=FALSE"
 BUILD_THREADS=1
 
 { # this ensures the entire script is downloaded #
