@@ -12,7 +12,7 @@ MODE=build_and_install
 LOG_FILE=/tmp/golosbootstrap.log
 
 # Build Options
-BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBRARIES=FALSE"
+BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBRARIES=FALSE -DBUILD_GOLOS_TESTNET=FALSE -DLOW_MEMORY_NODE=FALSE -DCHAINBASE_CHECK_LOCKING=FALSE -DCLEAR_VOTES=FALSE"
 BUILD_THREADS=1
 
 { # this ensures the entire script is downloaded #
@@ -97,7 +97,7 @@ CONTRIBEOF
 # Check if required packages are not installed
 print_info " - Checking Required Packages"
 pkgs_to_install=""
-for pkg in git cmake g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev libboost-all-dev libssl-dev libncurses5-dev doxygen libreadline-dev dh-autoreconf build-essential; do
+for pkg in git cmake g++ python3-dev autotools-dev libicu-dev build-essential libbz2-dev libboost-all-dev libssl-dev libncurses5-dev doxygen libreadline-dev dh-autoreconf build-essential; do
 	pkg_ok=no
 	dpkg-query -W --showformat='${Status}\n' $pkg | grep "install ok installed" > /dev/null && pkg_ok=yes
 	print_info " - - Checking For $pkg: $pkg_ok"
@@ -155,16 +155,15 @@ make -j$BUILD_THREADS || error_exit "Cannot compile project"
 # Preparing golosnode package
 print_info " - Copying Files For Packaging"
 install -m 0755 programs/golosd/golosd $GOLOS_PATH/
-install -m 0644 programs/golosd/snapshot5392323.json $GOLOS_PATH
 install -m 0755 programs/cli_wallet/cli_wallet $GOLOS_PATH
-cd ..
-
-# Copying contrib files to package
+install -m 0644 shares/golosd/snapshot5392323.json $GOLOS_PATH
 mkdir $GOLOS_PATH/witness_node_data_dir
-cp $BASEDIR/contrib/config.ini $GOLOS_PATH/witness_node_data_dir/config.ini
+install -m 0644 shares/golosd/seednodes $GOLOS_PATH/witness_node_data_dir
+install -m 0644 shares/golosd/config/config.ini $GOLOS_PATH/witness_node_data_dir
 mkdir -p $DEB_PATH/lib/systemd/system
-cp $BASEDIR/contrib/golosd.service $DEB_PATH/lib/systemd/system/
-cp -r $BASEDIR/contrib/debian $DEB_PATH/DEBIAN
+install -m 0644 $BASEDIR/contrib/golosd.service $DEB_PATH/lib/systemd/system/
+cp -rv $BASEDIR/contrib/debian $DEB_PATH/DEBIAN
+cd ..
 
 # Fixing package version
 UNIXTIME=$(date +%s)
