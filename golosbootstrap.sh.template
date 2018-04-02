@@ -156,10 +156,10 @@ make -j$BUILD_THREADS || error_exit "Cannot compile project"
 print_info " - Copying Files For Packaging"
 install -m 0755 programs/golosd/golosd $GOLOS_PATH/
 install -m 0755 programs/cli_wallet/cli_wallet $GOLOS_PATH
-install -m 0644 shares/golosd/snapshot5392323.json $GOLOS_PATH
+install -m 0644 share/golosd/snapshot5392323.json $GOLOS_PATH
 mkdir $GOLOS_PATH/witness_node_data_dir
-install -m 0644 shares/golosd/seednodes $GOLOS_PATH/witness_node_data_dir
-install -m 0644 shares/golosd/config/config.ini $GOLOS_PATH/witness_node_data_dir
+install -m 0644 share/golosd/seednodes $GOLOS_PATH/witness_node_data_dir
+install -m 0644 share/golosd/config/config.ini $GOLOS_PATH/witness_node_data_dir
 mkdir -p $DEB_PATH/lib/systemd/system
 install -m 0644 $BASEDIR/contrib/golosd.service $DEB_PATH/lib/systemd/system/
 cp -rv $BASEDIR/contrib/debian $DEB_PATH/DEBIAN
