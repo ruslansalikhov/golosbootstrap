@@ -8,12 +8,43 @@ PROGNAME=$(basename $0)
 # Settings
 GOLOS_REPO="https://github.com/GolosChain/golos"
 BRANCH=master
-MODE=build_and_install
 LOG_FILE=/tmp/golosbootstrap.log
 
+INSTALL=NO
+WITNESS_BUILD=NO
+
+# Parsing arguments
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    --install)
+        INSTALL=YES
+        shift # past argument
+        ;;
+    --witness)
+        WITNESS_BUILD=YES
+        shift # past argument
+        ;;
+    *)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        shift # past argument
+        ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
 # Build Options
-BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBRARIES=FALSE -DBUILD_GOLOS_TESTNET=FALSE -DLOW_MEMORY_NODE=FALSE -DCHAINBASE_CHECK_LOCKING=FALSE -DCLEAR_VOTES=FALSE"
+BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBRARIES=FALSE -DBUILD_GOLOS_TESTNET=FALSE -DCHAINBASE_CHECK_LOCKING=FALSE"
 BUILD_THREADS=1
+
+if [ x"$WITNESS_BUILD" == x"YES" ]; then
+    BUILD_OPTIONS="$BUILD_OPTIONS -DCLEAR_VOTES=ON -DLOW_MEMORY_NODE=ON"
+else
+    BUILD_OPTIONS="$BUILD_OPTIONS -DCLEAR_VOTES=FALSE -DLOW_MEMORY_NODE=FALSE"
+fi
 
 { # this ensures the entire script is downloaded #
 
@@ -47,11 +78,6 @@ function print_warn
 }
 
 trap cleanup EXIT INT TERM QUIT
-
-# Parsing arguments
-if [ ! -z $1 ]; then
-	[ x"build_only" == x"$1" ] && MODE=build_only
-fi
 
 print_info "* Checking System"
 
@@ -176,7 +202,7 @@ fakeroot dpkg-deb --build $DEB_PATH || error_exit "Cannot make DEB"
 
 mv $DEB_PATH/../golos.deb /tmp/golos-$GOLOS_VERSION-$UNIXTIME.deb
 
-if [ x"$MODE" == x"build_and_install" ]; then
+if [ x"$INSTALL" == x"YES" ]; then
 	print_info "* Installing Golos (requires root privileges)"
 	sudo dpkg -i /tmp/golos-$GOLOS_VERSION-$UNIXTIME.deb || error_exit "Cannot install package"
 fi
